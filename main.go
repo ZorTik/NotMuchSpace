@@ -44,9 +44,7 @@ func (game *Game) forOf(cons func(entity *Entity, index int)) {
 }
 
 func (game *Game) addEntity(entity *Entity) {
-	fmt.Println(game.field)
 	game.field = append(game.field, *entity)
-	fmt.Println(game.field)
 }
 
 func (game *Game) getEntityAt(x, y int) (*Entity, int) {
@@ -180,7 +178,6 @@ func (game *Game) render() {
 					mark = "X"
 					break
 				}
-				fmt.Println(entity.entityType)
 			}
 
 			print(mark + " ")
