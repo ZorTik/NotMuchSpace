@@ -108,20 +108,8 @@ func (game *Game) move(eIndex int, direction Direction) bool {
 		return false
 	}
 
-	switch direction {
-	case Up:
-		entity.y--
-		break
-	case Left:
-		entity.x--
-		break
-	case Down:
-		entity.y++
-		break
-	case Right:
-		entity.x++
-		break
-	}
+	entity.x += dx
+	entity.y += dy
 	game.field[eIndex] = entity
 
 	return true
