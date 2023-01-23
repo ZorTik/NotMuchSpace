@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -14,10 +15,11 @@ const (
 )
 
 const (
-	Up    Direction = "w"
-	Left  Direction = "a"
-	Down  Direction = "s"
-	Right Direction = "d"
+	Up         Direction = "w"
+	Left       Direction = "a"
+	Down       Direction = "s"
+	Right      Direction = "d"
+	Directions           = "wasd"
 )
 
 type Game struct {
@@ -108,6 +110,9 @@ func (game *Game) move(eIndex int, direction Direction) bool {
 	if nbh, _ := game.getEntityAt(entity.x+dx, entity.y+dy); nbh != nil {
 		// There is already an entity at the target position
 		return false
+	} else if OutOfBounds(entity.x+dx, entity.y+dy, &game.bounds) {
+		// The target position is out of bounds
+		return false
 	}
 
 	entity.x += dx
@@ -147,6 +152,9 @@ func (game *Game) handleInput(reader *bufio.Reader) {
 
 		if game.move(index, Direction(input)) {
 			break
+		} else if !strings.Contains(Directions, string(input)) {
+			fmt.Println("Directions: " + Directions)
+			continue
 		}
 
 		fmt.Println("You can't move here.")
@@ -160,20 +168,22 @@ func (game *Game) handleInput(reader *bufio.Reader) {
 }
 
 func (game *Game) render() {
-	tempField := map[[2]int]*Entity{}
+	tempField := map[int]Entity{}
 
 	game.forOf(func(e *Entity, _ int) {
-		coords := [2]int{e.x, e.y}
-		tempField[coords] = e
+		tempField[CoordsToIndex(e.x, e.y, game.bounds.width)] = *e
 	})
 
 	for y := 0; y < game.bounds.height; y++ {
 		for x := 0; x < game.bounds.width; x++ {
-			coords := [2]int{x, y}
+			index := CoordsToIndex(x, y, game.bounds.width)
 
 			mark := "#"
-			if entity, has := tempField[coords]; has {
-				switch entity.entityType {
+			if entity, has := tempField[index]; has {
+
+				typ := entity.entityType
+
+				switch typ {
 				case Player:
 					mark = "O"
 					break
@@ -197,7 +207,7 @@ func loop(game *Game) {
 		game.render()
 		game.handleInput(reader)
 
-		if player, _ := game.getPlayer(); OutOfBounds(player, &game.bounds) {
+		if player, _ := game.getPlayer(); EntityOutOfBounds(player, &game.bounds) {
 			exit("Out of bounds. Game over.")
 			break
 		}

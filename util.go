@@ -11,8 +11,12 @@ func Shuffle[n any](arr []n) *[]n {
 	return &arr
 }
 
-func OutOfBounds(entity *Entity, bounds *Bounds) bool {
-	return entity.x < 0 || entity.x >= bounds.width || entity.y < 0 || entity.y >= bounds.height
+func EntityOutOfBounds(entity *Entity, bounds *Bounds) bool {
+	return OutOfBounds(entity.x, entity.y, bounds)
+}
+
+func OutOfBounds(x, y int, bounds *Bounds) bool {
+	return x < 0 || x >= bounds.width || y < 0 || y >= bounds.height
 }
 
 func DirectionToXY(direction Direction) (int, int) {
@@ -43,4 +47,8 @@ func XYToDirection(x, y int) Direction {
 	}
 
 	return ""
+}
+
+func CoordsToIndex(x, y, width int) int {
+	return x + y*width
 }
