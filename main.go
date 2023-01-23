@@ -246,11 +246,6 @@ func loop(game *Game) {
 			exit("No more moves. Game over.")
 			break
 		}
-
-		if player, _ := game.getPlayer(); EntityOutOfBounds(player, &game.bounds) {
-			exit("Out of bounds. Game over.")
-			break
-		}
 	}
 }
 
