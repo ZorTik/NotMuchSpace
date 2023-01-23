@@ -99,8 +99,15 @@ func (game *Game) getPlayer() (*Entity, int) {
 	return result, index
 }
 
-func (game *Game) move(eIndex int, direction Direction) {
+func (game *Game) move(eIndex int, direction Direction) bool {
 	entity := game.field[eIndex]
+
+	dx, dy := DirectionToXY(direction)
+	if nbh, _ := game.getEntityAt(entity.x+dx, entity.y+dy); nbh != nil {
+		// There is already an entity at the target position
+		return false
+	}
+
 	switch direction {
 	case Up:
 		entity.y--
@@ -116,6 +123,8 @@ func (game *Game) move(eIndex int, direction Direction) {
 		break
 	}
 	game.field[eIndex] = entity
+
+	return true
 }
 
 func (game *Game) moveAI(index int) {
@@ -141,10 +150,18 @@ func (game *Game) moveAI(index int) {
 	}
 }
 
-func (game *Game) handleInput(input string) {
-	_, index := game.getPlayer()
+func (game *Game) handleInput(reader *bufio.Reader) {
+	for {
+		input, _, _ := reader.ReadLine()
 
-	game.move(index, Direction(input))
+		_, index := game.getPlayer()
+
+		if game.move(index, Direction(input)) {
+			break
+		}
+
+		fmt.Println("You can't move here.")
+	}
 	game.forOf(func(entity *Entity, index int) {
 		if entity.entityType != Player {
 			game.moveAI(index)
@@ -188,8 +205,7 @@ func loop(game *Game) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		game.render()
-		input, _, _ := reader.ReadLine()
-		game.handleInput(string(input))
+		game.handleInput(reader)
 
 		if player, _ := game.getPlayer(); OutOfBounds(player, &game.bounds) {
 			fmt.Println("Out of bounds. Game over.")
