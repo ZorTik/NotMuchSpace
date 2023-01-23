@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	Player       EntityType = "player"
-	CommonEntity EntityType = "common_entity"
+	Player              EntityType = "player"
+	CommonEntity        EntityType = "common_entity"
+	EntitiesRemovalBuff EntityType = "entities_removal_buff"
 )
 
 const (
@@ -29,6 +30,7 @@ type Game struct {
 	field          []Entity
 	bounds         Bounds
 	entityGenSteps int
+	buffGenChance  int // Percentage
 }
 
 type Bounds struct {
@@ -64,6 +66,19 @@ type EntityHandler struct {
 
 var startTime = time.Now()
 var moves = 0
+var buffs = []EntityType{EntitiesRemovalBuff}
+var game *Game
+var buffFuncs = map[EntityType][]OnCollidedFunc{
+	EntitiesRemovalBuff: []OnCollidedFunc{
+		func(player, buff *Entity) {
+			// Removes 2 entities from the field
+			if len(game.field) < 2 {
+				return
+			}
+			game.field = game.field[:len(game.field)-2]
+		},
+	},
+}
 
 func (game *Game) forOf(cons func(entity *Entity, index int)) {
 	// Makes Game structure iterable
@@ -90,9 +105,14 @@ func (game *Game) getEntityAt(x, y int) (*Entity, int) {
 	return result, index
 }
 
-func (game *Game) generateBuff(_type EntityType, collidedFuncs ...OnCollidedFunc) {
+func (game *Game) generateBuff(_type EntityType) {
+	if _, is := buffFuncs[_type]; !is {
+		// Type is not a registered buff
+		return
+	}
+
 	game.generateEntity(_type, SetTransparent, func(entity *Entity) *Entity {
-		for _, collidedFunc := range collidedFuncs {
+		for _, collidedFunc := range buffFuncs[_type] {
 			// When player stands on the buff
 			entity.handler.onCollided = append(entity.handler.onCollided, collidedFunc)
 		}
@@ -244,7 +264,14 @@ func (game *Game) handleInput(reader *bufio.Reader) {
 		}
 	})
 	for i := 0; i < game.entityGenSteps; i++ {
+		// Generate entities
 		game.generateEntity(CommonEntity)
+	}
+
+	if rand.Intn(100) < game.buffGenChance {
+		// Generate random buff
+		i := rand.Intn(len(buffFuncs))
+		game.generateBuff(buffs[i])
 	}
 }
 
@@ -272,6 +299,11 @@ func (game *Game) render() {
 					mark = "X"
 					break
 				}
+
+				if _, c := buffFuncs[typ]; c {
+					// Entity is a buff
+					mark = "B"
+				}
 			}
 
 			print(mark + " ")
@@ -298,7 +330,7 @@ func loop(game *Game) {
 }
 
 func prepare(bounds Bounds) Game {
-	game := Game{bounds: bounds, entityGenSteps: 2}
+	game := Game{bounds: bounds, entityGenSteps: 2, buffGenChance: 15}
 	game.generateEntity(Player)
 
 	return game
@@ -314,9 +346,11 @@ func exit(msg string) {
 }
 
 func main() {
-	game := prepare(Bounds{
+	_game := prepare(Bounds{
 		width:  10,
 		height: 10,
 	})
-	loop(&game)
+
+	game = &_game
+	loop(game)
 }
