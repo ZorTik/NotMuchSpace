@@ -116,10 +116,11 @@ func (game *Game) generateEntity(_type EntityType, chain ...EntityGenerationFunc
 	}
 
 	generatedEntity := &Entity{
-		id:         string(rune(rand.Int())),
-		entityType: _type,
-		x:          x,
-		y:          y,
+		id:          string(rune(rand.Int())),
+		entityType:  _type,
+		x:           x,
+		y:           y,
+		transparent: false,
 	}
 
 	for _, f := range chain {
