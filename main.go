@@ -55,9 +55,11 @@ type Entity struct {
 	handler     EntityHandler
 }
 
+type OnCollidedFunc func(*Entity, *Entity)
+
 type EntityHandler struct {
 	// onCollided Only if Entity is transparent
-	onCollided []func(*Entity, *Entity) // Player, Target
+	onCollided []OnCollidedFunc // Player, Target
 }
 
 var startTime = time.Now()
@@ -86,6 +88,16 @@ func (game *Game) getEntityAt(x, y int) (*Entity, int) {
 	})
 
 	return result, index
+}
+
+func (game *Game) generateBuff(_type EntityType, collidedFuncs ...OnCollidedFunc) {
+	game.generateEntity(_type, SetTransparent, func(entity *Entity) *Entity {
+		for _, collidedFunc := range collidedFuncs {
+			// When player stands on the buff
+			entity.handler.onCollided = append(entity.handler.onCollided, collidedFunc)
+		}
+		return entity
+	})
 }
 
 func (game *Game) generateEntity(_type EntityType, chain ...EntityGenerationFunc) {
