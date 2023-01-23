@@ -23,8 +23,9 @@ const (
 )
 
 type Game struct {
-	field  []Entity
-	bounds Bounds
+	field          []Entity
+	bounds         Bounds
+	entityGenSteps int
 }
 
 type Bounds struct {
@@ -44,6 +45,7 @@ var startTime = time.Now()
 var moves = 0
 
 func (game *Game) forOf(cons func(entity *Entity, index int)) {
+	// Makes Game structure iterable
 	for i, entity := range game.field {
 		cons(&entity, i)
 	}
@@ -71,6 +73,7 @@ func (game *Game) generateEntity(_type EntityType) {
 	var x int
 	var y int
 	for {
+		// generates random position until empty one is found
 		_x := rand.Intn(game.bounds.width)
 		_y := rand.Intn(game.bounds.height)
 
@@ -103,15 +106,43 @@ func (game *Game) getPlayer() (*Entity, int) {
 	return result, index
 }
 
-func (game *Game) move(eIndex int, direction Direction) bool {
+func (game *Game) checkCanMove(eIndex int) (dx, dy int, canMove bool) {
 	entity := game.field[eIndex]
 
-	dx, dy := DirectionToXY(direction)
+	moves := []Direction{Up, Left, Down, Right}
+
+	moves = *Shuffle(moves)
+
+	for _, move := range moves {
+		if &entity == nil {
+			continue
+		}
+
+		_dx, _dy := DirectionToXY(move)
+		if game.canMove(&entity, _dx, _dy) {
+			return _dx, _dy, true
+		}
+	}
+
+	return 0, 0, false
+}
+
+func (game *Game) canMove(entity *Entity, dx, dy int) bool {
 	if nbh, _ := game.getEntityAt(entity.x+dx, entity.y+dy); nbh != nil {
 		// There is already an entity at the target position
 		return false
 	} else if OutOfBounds(entity.x+dx, entity.y+dy, &game.bounds) {
 		// The target position is out of bounds
+		return false
+	}
+	return true
+}
+
+func (game *Game) move(eIndex int, direction Direction) bool {
+	entity := game.field[eIndex]
+
+	dx, dy := DirectionToXY(direction)
+	if !game.canMove(&entity, dx, dy) {
 		return false
 	}
 
@@ -133,13 +164,11 @@ func (game *Game) moveAI(index int) {
 
 	moves = *Shuffle(moves)
 
-	for _index, move := range moves {
+	for _, move := range moves {
 		_xC, _yC := DirectionToXY(move)
 		e, _ := game.getEntityAt(x+_xC, y+_yC)
 		if e == nil {
 			game.move(index, move)
-		} else if e != nil && _index == len(moves)-1 && entity.entityType == Player {
-			exit("No more moves. Game over.")
 		}
 	}
 }
@@ -151,8 +180,10 @@ func (game *Game) handleInput(reader *bufio.Reader) {
 		_, index := game.getPlayer()
 
 		if game.move(index, Direction(input)) {
+			// Move was successful, breaking attempt loop
 			break
 		} else if !strings.Contains(Directions, string(input)) {
+			// Invalid direction
 			fmt.Println("Directions: " + Directions)
 			continue
 		}
@@ -164,7 +195,9 @@ func (game *Game) handleInput(reader *bufio.Reader) {
 			game.moveAI(index)
 		}
 	})
-	game.generateEntity(CommonEntity)
+	for i := 0; i < game.entityGenSteps; i++ {
+		game.generateEntity(CommonEntity)
+	}
 }
 
 func (game *Game) render() {
@@ -207,6 +240,13 @@ func loop(game *Game) {
 		game.render()
 		game.handleInput(reader)
 
+		_, pIndex := game.getPlayer()
+
+		if _, _, canMove := game.checkCanMove(pIndex); !canMove {
+			exit("No more moves. Game over.")
+			break
+		}
+
 		if player, _ := game.getPlayer(); EntityOutOfBounds(player, &game.bounds) {
 			exit("Out of bounds. Game over.")
 			break
@@ -215,7 +255,7 @@ func loop(game *Game) {
 }
 
 func prepare(bounds Bounds) Game {
-	game := Game{bounds: bounds}
+	game := Game{bounds: bounds, entityGenSteps: 3}
 	game.generateEntity(Player)
 
 	return game

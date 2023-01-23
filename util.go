@@ -34,21 +34,6 @@ func DirectionToXY(direction Direction) (int, int) {
 	return 0, 0
 }
 
-func XYToDirection(x, y int) Direction {
-	switch {
-	case x == 0 && y == -1:
-		return Up
-	case x == 0 && y == 1:
-		return Down
-	case x == -1 && y == 0:
-		return Left
-	case x == 1 && y == 0:
-		return Right
-	}
-
-	return ""
-}
-
 func CoordsToIndex(x, y, width int) int {
 	return x + y*width
 }
