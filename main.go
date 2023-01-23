@@ -1,3 +1,6 @@
+// Author: ZorTik
+// Date: 23/01 2023
+// Elapsed: <1d
 package main
 
 import (
@@ -34,11 +37,27 @@ type Bounds struct {
 
 type Direction string
 type EntityType string
+type EntityGenerationFunc func(*Entity) *Entity
+
+var (
+	// SetTransparent Sets the entity to be transparent after generated
+	SetTransparent EntityGenerationFunc = func(entity *Entity) *Entity {
+		entity.transparent = true
+		return entity
+	}
+)
 
 type Entity struct {
-	id         string
-	entityType EntityType
-	x, y       int
+	id          string
+	entityType  EntityType
+	x, y        int
+	transparent bool
+	handler     EntityHandler
+}
+
+type EntityHandler struct {
+	// onCollided Only if Entity is transparent
+	onCollided []func(*Entity, *Entity) // Player, Target
 }
 
 var startTime = time.Now()
@@ -69,7 +88,7 @@ func (game *Game) getEntityAt(x, y int) (*Entity, int) {
 	return result, index
 }
 
-func (game *Game) generateEntity(_type EntityType) {
+func (game *Game) generateEntity(_type EntityType, chain ...EntityGenerationFunc) {
 	var x int
 	var y int
 	for {
@@ -84,12 +103,18 @@ func (game *Game) generateEntity(_type EntityType) {
 		}
 	}
 
-	game.addEntity(&Entity{
+	generatedEntity := &Entity{
 		id:         string(rune(rand.Int())),
 		entityType: _type,
 		x:          x,
 		y:          y,
-	})
+	}
+
+	for _, f := range chain {
+		generatedEntity = f(generatedEntity)
+	}
+
+	game.addEntity(generatedEntity)
 }
 
 func (game *Game) getPlayer() (*Entity, int) {
@@ -128,7 +153,7 @@ func (game *Game) checkCanMove(eIndex int) (dx, dy int, canMove bool) {
 }
 
 func (game *Game) canMove(entity *Entity, dx, dy int) bool {
-	if nbh, _ := game.getEntityAt(entity.x+dx, entity.y+dy); nbh != nil {
+	if nbh, _ := game.getEntityAt(entity.x+dx, entity.y+dy); nbh != nil && !nbh.transparent {
 		// There is already an entity at the target position
 		return false
 	} else if OutOfBounds(entity.x+dx, entity.y+dy, &game.bounds) {
@@ -148,6 +173,16 @@ func (game *Game) move(eIndex int, direction Direction) bool {
 
 	entity.x += dx
 	entity.y += dy
+
+	if ent, _ := game.getEntityAt(entity.x, entity.y); ent != nil {
+		defer (func() {
+			// Call onCollided handlers after reassign
+			for _, f := range entity.handler.onCollided {
+				f(&entity, ent)
+			}
+		})()
+	}
+
 	game.field[eIndex] = entity
 
 	return true
