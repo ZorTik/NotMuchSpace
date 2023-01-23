@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"time"
 )
 
 const (
@@ -36,6 +37,9 @@ type Entity struct {
 	entityType EntityType
 	x, y       int
 }
+
+var startTime = time.Now()
+var moves = 0
 
 func (game *Game) forOf(cons func(entity *Entity, index int)) {
 	for i, entity := range game.field {
@@ -130,8 +134,7 @@ func (game *Game) moveAI(index int) {
 		if e == nil {
 			game.move(index, move)
 		} else if e != nil && _index == len(moves)-1 && entity.entityType == Player {
-			fmt.Println("No more moves. Game over.")
-			os.Exit(0)
+			exit("No more moves. Game over.")
 		}
 	}
 }
@@ -189,11 +192,13 @@ func (game *Game) render() {
 func loop(game *Game) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
+		moves++
+
 		game.render()
 		game.handleInput(reader)
 
 		if player, _ := game.getPlayer(); OutOfBounds(player, &game.bounds) {
-			fmt.Println("Out of bounds. Game over.")
+			exit("Out of bounds. Game over.")
 			break
 		}
 	}
@@ -204,6 +209,15 @@ func prepare(bounds Bounds) Game {
 	game.generateEntity(Player)
 
 	return game
+}
+
+func exit(msg string) {
+	fmt.Println(msg)
+	fmt.Println("------------------------------------")
+	fmt.Println("Moves:", moves)
+	fmt.Println("Time:", time.Since(startTime))
+	fmt.Println("------------------------------------")
+	os.Exit(0)
 }
 
 func main() {
