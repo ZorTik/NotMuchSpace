@@ -250,7 +250,7 @@ func loop(game *Game) {
 }
 
 func prepare(bounds Bounds) Game {
-	game := Game{bounds: bounds, entityGenSteps: 3}
+	game := Game{bounds: bounds, entityGenSteps: 2}
 	game.generateEntity(Player)
 
 	return game
